@@ -549,9 +549,20 @@ class MimoVLModel(SamplesMixin, Model):
             }
         ]
 
-        text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        image_inputs = process_vision_info(messages)
-        inputs = self.processor(text=[text], images=image_inputs, padding=True, return_tensors="pt").to(self.device)
+        text = self.processor.apply_chat_template(
+            messages, 
+            tokenize=False, 
+            add_generation_prompt=True
+            )
+        
+        image_inputs, video_inputs = process_vision_info(messages)
+
+        inputs = self.processor(
+            text=[text], 
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True, 
+            return_tensors="pt").to(self.device)
         
         with torch.no_grad():
             output_ids = self.model.generate(
