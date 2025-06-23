@@ -18,9 +18,9 @@ from qwen_vl_utils import process_vision_info
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DETECTION_SYSTEM_PROMPT = """You are a helpful assistant. The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions, which will request that you detect both primary elements and their associated components. 
+DEFAULT_DETECTION_SYSTEM_PROMPT = """You are a helpful assistant. You specialize in detecting and localizating meaningful visual elements. 
 
-You specialize in detection and localization of any meaningful visual elements. You can identify and localize objects, components, people, places, things, and UI elements in images.
+You can detect and localize objects, components, people, places, things, and UI elements in images.
 
 Always return your response as valid JSON wrapped in ```json blocks.
 
@@ -28,7 +28,7 @@ Always return your response as valid JSON wrapped in ```json blocks.
 {
     "detections": [
         {
-            "bbox": [x1, y1, x2, y2],
+            "bbox_2d": [x1, y1, x2, y2],
             "label": "descriptive label for the action that can be taken or object detected"
         },
         {
@@ -42,12 +42,6 @@ Always return your response as valid JSON wrapped in ```json blocks.
 The JSON should contain bounding boxes in pixel coordinates [x1,y1,x2,y2] format, where:
 - x1,y1 is the top-left corner
 - x2,y2 is the bottom-right corner
-- Use descriptive, context-specific labels. 
-- Each detection should have a 'bbox' (or 'bbox_2d') and optional 'label' field
-- The 'label' field should be a string describing the detected object or action
-- Once something has been localized, do not localize it again and move on to the the next object
-
-The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions and do what they tell you to.
 """
 
 DEFAULT_KEYPOINT_SYSTEM_PROMPT = """You are a helpful assistant. You specialize in key point detection across any visual domain. A key point represents the center of any meaningful visual element. 
@@ -68,13 +62,8 @@ For each key point identify the key point and provide a contextually appropriate
 ```
 
 The JSON should contain points in pixel coordinates [x,y] format, where:
-- x is the horizontal coordinate
-- y is the vertical coordinate
-- Each point must have a 'point_2d' field with [x,y] coordinates
-- Each point should have a descriptive 'label' field of what the point represents
-- Once something has been pointed, do not point at it again and move on to the the next object
-
-The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions and do what they tell you to.
+- x is the horizontal center coordinate of the visual element
+- y is the vertical center coordinate of the visual element
 """
 
 DEFAULT_CLASSIFICATION_SYSTEM_PROMPT = """You are a helpful assistant. You specializes in comprehensive classification across any visual domain, capable of analyzing:
@@ -97,9 +86,6 @@ The JSON should contain a list of classifications where:
 - Each classification must have a 'label' field
 - Labels should be descriptive strings describing what you've identified in the image
 - The response should be a list of classifications
-- Once you have determined a classification, do not repeat it and move on to the next classification
-
-The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions and do what they tell you to.
 """
    
 DEFAULT_OCR_SYSTEM_PROMPT = """You are a helpful assistant specializing in text detection and recognition (OCR) in images. Your task is to locate and read text from any visual content, including documents, UI elements, signs, or any other text-containing regions.
@@ -110,9 +96,9 @@ Always return your response as valid JSON wrapped in ```json blocks.
 {
     "text_detections": [
         {
-            "bbox": [x1, y1, x2, y2],
+            "bbox_2d": [x1, y1, x2, y2],
             "text": "exact text content found in this region",
-            "text_type": "the text region category based on the document, including but not limited to: title, abstract, heading, paragraph, button, link, label, icon, menu item, etc.",
+            "text_type": text region category based on the document for example title, abstract, heading, paragraph, button, link, label, icon, menu item, etc.
         }
     ]
 }
@@ -121,12 +107,6 @@ Always return your response as valid JSON wrapped in ```json blocks.
 The JSON should contain bounding boxes in pixel coordinates [x1,y1,x2,y2] format, where:
 - x1,y1 is the top-left corner
 - x2,y2 is the bottom-right corner
-- All coordinates are in absolute pixel values
-- text_type is the text region category based on the document, including but not limited to: title, abstract, heading, paragraph, button, link, label, icon, menu item, etc.
-- The 'text' field should be a string containing the exact text content found in the region preserving:
-  - Case sensitivity
-  - Numbers and special characters
-  - Line breaks (if present)
 """
 
 DEFAULT_VQA_SYSTEM_PROMPT = "You are a helpful assistant. You provide clear and concise answerss to questions about images. Report answers in natural language text in English."
@@ -581,10 +561,13 @@ class MimoVLModel(SamplesMixin, Model):
         # Extract reasoning if present
         reasoning = actions.get("reasoning", "") if isinstance(actions, dict) else ""
         
-        # Get keypoints list
-        keypoint_list = actions.get("keypoints", []) if isinstance(actions, dict) else actions
+        # Handle nested dictionary structures
+        if isinstance(points, dict):
+            points = points.get("data", points)
+            if isinstance(points, dict):
+                points = next((v for v in points.values() if isinstance(v, list)), points)
         
-        for idx, kp in enumerate(keypoint_list):
+        for idx, kp in enumerate(points):
             try:
                 # Extract and normalize point coordinates
                 x, y = map(float, kp["point_2d"])
@@ -723,6 +706,7 @@ class MimoVLModel(SamplesMixin, Model):
             return output_text.strip()
         elif self.operation == "detect":
             parsed_output = self._parse_json(output_text)
+            return self._to_detections(parsed_output, input_width, input_height)
         elif self.operation == "ocr":
             parsed_output = self._parse_json(output_text)
             return self._to_ocr_detections(parsed_output, input_width, input_height)
@@ -732,6 +716,9 @@ class MimoVLModel(SamplesMixin, Model):
         elif self.operation == "classify":
             parsed_output = self._parse_json(output_text)
             return self._to_classifications(parsed_output)
+        elif self.operation == "agentic":
+            parsed_output = self._parse_json(output_text)
+            return self._to_agentic_keypoints(parsed_output)
 
     def predict(self, image, sample=None):
         """Process an image with the model.
