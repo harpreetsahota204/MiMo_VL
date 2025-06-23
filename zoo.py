@@ -135,33 +135,41 @@ DEFAULT_AGENTIC_PROMPT = """You are a GUI agent. You interact with graphical use
 
 The Action Space is:
 
-- click: {"action":"click","start_point":[x,y],"text":text} – Click at (x,y) on an element with the given text.
+- click: {"action":"click","point_2d":[x,y],"text":text} – Click at (x,y) on an element with the given text.
 
-- scroll: {"action":"scroll","direction":dir,"scroll_distance":dist} – Scroll in the given direction by the specified distance.
+- scroll: {"action":"scroll", "point_2d":[x,y], "direction":dir,"scroll_distance":dist} – Scroll in the given direction by the specified distance.
 
-- input: {"action":"input","text":text,"start_point":[x,y]} – Type the specified text at coordinates (x,y).
+- input: {"action":"input","point_2d":[x,y],"text":text} – Type the specified text at coordinates (x,y).
 
-- drag: {"action":"drag","start_point":[x1,y1],"end_point":[x2,y2]} – Drag from start_point to end_point.
+- drag: {"action":"drag","point_2d":[x,y],"end_point":[x2,y2]} – Drag from start_point to end_point.
 
-- open: {"action":"open","app":app_name} – Open the specified application.
+- open: {"action":"open","point_2d":[x,y],"app":app_name} – Open the specified application.
 
-- press: {"action":"press","keys":[key1,key2,...]} – Press the specified hotkeys.
+- press: {"action":"press", "point_2d":[x,y]} – Press the specified hotkeys.
 
-- finished: {"action":"finished","status":status} – Mark the task as complete.
+- finished: {"action":"finished","point_2d":[x,y], "status":status} – Mark the task as complete.
 
-- longpress: {"action":"longpress","start_point":[x,y]} – Long press at (x,y).
+- longpress: {"action":"longpress", "point_2d":[x,y]} – Long press at (x,y).
 
-- hover: {"action":"hover"} – Hover the mouse over a location.
+- hover: {"action":"hover", "point_2d":[x,y]} – Hover the mouse over a location.
 
-- select: {"action":"select","text":text} – Select the specified text.
+- select: {"action":"select","point_2d":[x,y],"text":text} – Select the specified text.
 
-- wait: {"action":"wait"} – Pause for a brief moment.
+- wait: {"action":"wait", "point_2d":[x,y]} – Pause for a brief moment.
 
-- appswitch: {"action":"appswitch","app":app_name} – Switch to the specified application.
+- appswitch: {"action":"appswitch","point_2d":[x,y], "app":app_name} – Switch to the specified application.
 
-Bounding box coordinates are specified in the format (top-left x, top-left y, bottom-right x, bottom-right y) and report your action in JSON with the format: [{{"bbox_2d": [...], "label": "{{the_whole_command}}"}}, ...].
+For each action identify the key point on the streen and provide a contextually appropriate label and always return your response as valid JSON wrapped in ```json blocks.
 
-Please provide the bounding box coordinates of the region that corresponds to the given command.
+```json
+{
+    "keypoints": [
+        {
+            "point_2d": [x, y],
+            "action": "action to be executed"
+        }
+    ]
+}
 
 """
 
@@ -553,6 +561,47 @@ class MimoVLModel(SamplesMixin, Model):
                 logger.debug(f"Error processing point {point}: {e}")
                 continue
                 
+        return fo.Keypoints(keypoints=keypoints)
+    
+    def _to_agentic_keypoints(self, actions: Dict, image_width: int, image_height: int) -> fo.Keypoints:
+        """Convert agentic actions to FiftyOne Keypoints.
+        
+        Args:
+            actions: Dictionary containing:
+                - keypoints list with point_2d and label
+                - reasoning from think tags
+            image_width: Original image width in pixels
+            image_height: Original image height in pixels
+        
+        Returns:
+            fo.Keypoints: FiftyOne Keypoints object
+        """
+        keypoints = []
+        
+        # Extract reasoning if present
+        reasoning = actions.get("reasoning", "") if isinstance(actions, dict) else ""
+        
+        # Get keypoints list
+        keypoint_list = actions.get("keypoints", []) if isinstance(actions, dict) else actions
+        
+        for idx, kp in enumerate(keypoint_list):
+            try:
+                # Extract and normalize point coordinates
+                x, y = map(float, kp["point_2d"])
+                point = [x / image_width, y / image_height]
+                
+                keypoint = fo.Keypoint(
+                    label=kp["action"],
+                    points=[point],
+                    reasoning=reasoning,
+                    metadata={"sequence_idx": idx}
+                )
+                keypoints.append(keypoint)
+                    
+            except Exception as e:
+                logger.debug(f"Error processing keypoint {kp}: {e}")
+                continue
+                    
         return fo.Keypoints(keypoints=keypoints)
 
     def _to_classifications(self, classes: List[Dict]) -> fo.Classifications:
