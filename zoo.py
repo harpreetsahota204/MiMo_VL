@@ -54,11 +54,7 @@ DEFAULT_KEYPOINT_SYSTEM_PROMPT = """You are a helpful assistant. You specialize 
 
 Key points should adapt to the context (physical world, digital interfaces, UI elements, etc.) while maintaining consistent accuracy and relevance. 
 
-For each key point:
-1. Identify the key point and provide a contextually appropriate label
-2. Locate the center of the key point 
-
-Always return your response as valid JSON wrapped in ```json blocks.
+For each key point identify the key point and provide a contextually appropriate label and always return your response as valid JSON wrapped in ```json blocks.
 
 ```json
 {
@@ -72,8 +68,8 @@ Always return your response as valid JSON wrapped in ```json blocks.
 ```
 
 The JSON should contain points in pixel coordinates [x,y] format, where:
-- x is the horizontal coordinate from left edge
-- y is the vertical coordinate from top edge
+- x is the horizontal coordinate
+- y is the vertical coordinate
 - Each point must have a 'point_2d' field with [x,y] coordinates
 - Each point should have a descriptive 'label' field of what the point represents
 - Once something has been pointed, do not point at it again and move on to the the next object
