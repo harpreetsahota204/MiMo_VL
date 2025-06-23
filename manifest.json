@@ -1,0 +1,84 @@
+{
+    "name": "MiMo-VL",
+    "url": "https://github.com/harpreetsahota204/MiMo_VL",
+    "models": [
+        {
+            "base_name": "XiaomiMiMo/MiMo-VL-7B-RL",
+            "base_filename":"MiMo-VL-7B-RL",
+            "author": "XiaomiMiMo",
+            "license": "MIT",
+            "source": "https://huggingface.co/XiaomiMiMo/MiMo-VL-7B-RL",
+            "description": "MiMo-VL-7B is a compact yet powerful vision-language model developed through extensive pre-training and reinforcement learning to achieve state-of-the-art performance on a variety of visual-language tasks.",
+            "tags": [
+                "detection",
+                "ocr",
+                "VLM",
+                "classification",
+                "zero-shot",
+                "visual-agent"
+            ],
+            "date_added": "2025-06-23",
+            "requirements": {
+                "packages": ["huggingface-hub","transformers", "torch", "torchvision", "qwen-vl-utils", "accelerate"],
+                "cpu": {
+                    "support": true
+                },
+                "gpu": {
+                    "support": true
+                }
+            }
+        },        
+        {
+            "base_name": "XiaomiMiMo/MiMo-VL-7B-SFT",
+            "base_filename":"MiMo-VL-7B-SFT",
+            "author": "XiaomiMiMo",
+            "license": "MIT",
+            "source": "https://huggingface.co/XiaomiMiMo/MiMo-VL-7B-SFT",
+            "description": "MiMo-VL-7B is a compact yet powerful vision-language model developed through extensive pre-training and reinforcement learning to achieve state-of-the-art performance on a variety of visual-language tasks.",
+            "tags": [
+                "detection",
+                "ocr",
+                "VLM",
+                "classification",
+                "zero-shot",
+                "visual-agent"
+            ],
+            "date_added": "2025-06-23",
+            "requirements": {
+                "packages": ["huggingface-hub","transformers", "torch", "torchvision", "qwen-vl-utils", "accelerate"],
+                "cpu": {
+                    "support": true
+                },
+                "gpu": {
+                    "support": true
+                }
+            }
+        },
+        {
+            "base_name": "XiaomiMiMo/MiMo-VL-7B-SFT-GGUF",
+            "base_filename":"MiMo-VL-7B-SFT-GGUF",
+            "author": "XiaomiMiMo",
+            "license": "MIT",
+            "source": "https://huggingface.co/XiaomiMiMo/MiMo-VL-7B-SFT-GGUF",
+            "description": "MiMo-VL-7B is a compact yet powerful vision-language model developed through extensive pre-training and reinforcement learning to achieve state-of-the-art performance on a variety of visual-language tasks.",
+            "tags": [
+                "detection",
+                "ocr",
+                "VLM",
+                "classification",
+                "zero-shot",
+                "visual-agent"
+            ],
+            "date_added": "2025-06-23",
+            "requirements": {
+                "packages": ["huggingface-hub","transformers", "torch", "torchvision", "qwen-vl-utils", "accelerate"],
+                "cpu": {
+                    "support": true
+                },
+                "gpu": {
+                    "support": true
+                }
+            }
+        }
+    ]
+}
