@@ -12,6 +12,7 @@ import fiftyone as fo
 from fiftyone import Model, SamplesMixin
 
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+from transformers.utils import is_flash_attn_2_available
 
 from qwen_vl_utils import process_vision_info
 
@@ -211,19 +212,24 @@ class MimoVLModel(SamplesMixin, Model):
         # Load model and processor
         logger.info(f"Loading model from {model_path}")
 
+        model_kwargs = {
+            "torch_dtype": self.torch_dtype,
+            "device_map":self.device,
+            }
+
+        if is_flash_attn_2_available():
+            model_kwargs["attn_implementation"] = "flash_attention_2"
+
         if self.torch_dtype:
             self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                 model_path,
                 trust_remote_code=True,
-                # local_files_only=True,
-                device_map=self.device,
-                torch_dtype=self.torch_dtype
+                **model_kwargs
             )
         else:
             self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                 model_path,
                 trust_remote_code=True,
-                # local_files_only=True,
                 device_map=self.device,
             )
         
