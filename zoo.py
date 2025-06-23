@@ -411,6 +411,93 @@ class MimoVLModel(SamplesMixin, Model):
                     
         return fo.Detections(detections=detections)
 
+    def _to_ocr_detections(self, boxes: List[Dict], image_width: int, image_height: int) -> fo.Detections:
+        """Convert OCR results to FiftyOne Detections with reasoning.
+        
+        Takes OCR detection results and converts them to FiftyOne's format, including:
+        - Coordinate normalization
+        - Text content preservation
+        - Text type categorization
+        - Reasoning attachment
+        
+        Args:
+            boxes: OCR detection results, either:
+                - List of OCR dictionaries
+                - Dictionary containing 'data' and 'reasoning'
+            image_width: Original image width in pixels
+            image_height: Original image height in pixels
+        
+        Returns:
+            fo.Detections: FiftyOne Detections object containing all converted OCR detections
+            
+        Example input:
+            {
+                "data": {
+                    "text_detections": [
+                        {
+                            "bbox": [0,0,100,100],
+                            "text": "Hello",
+                            "text_type": "heading"
+                        }
+                    ]
+                },
+                "reasoning": "Found heading text in top-left corner"
+            }
+        """
+        detections = []
+        
+        # Extract reasoning if present in dictionary format
+        reasoning = boxes.get("reasoning", "") if isinstance(boxes, dict) else ""
+        
+        # Handle nested dictionary structures
+        if isinstance(boxes, dict):
+            # Try to get data field, fall back to original dict if not found
+            boxes = boxes.get("data", boxes)
+            if isinstance(boxes, dict):
+                # If still a dict, try to find first list value (usually "text_detections")
+                boxes = next((v for v in boxes.values() if isinstance(v, list)), boxes)
+        
+        # Ensure boxes is a list, even for single box input
+        boxes = boxes if isinstance(boxes, list) else [boxes]
+        
+        # Process each OCR box
+        for box in boxes:
+            try:
+                # Extract bbox coordinates, checking both possible keys
+                bbox = box.get('bbox_2d', box.get('bbox', None))
+                if not bbox:
+                    continue
+                    
+                # Extract text content and type
+                text = box.get('text')
+                text_type = box.get('text_type', 'text')  # Default to 'text' if not specified
+                
+                # Skip if no text content
+                if not text:
+                    continue
+                    
+                # Convert pixel coordinates to normalized [0,1] coordinates
+                x1, y1, x2, y2 = map(float, bbox)
+                x = x1 / image_width  # Left coordinate
+                y = y1 / image_height  # Top coordinate
+                w = (x2 - x1) / image_width  # Width
+                h = (y2 - y1) / image_height  # Height
+                
+                # Create FiftyOne Detection object
+                detection = fo.Detection(
+                    label=str(text_type),
+                    bounding_box=[x, y, w, h],
+                    text=str(text),
+                    reasoning=reasoning  # Attach reasoning to detection
+                )
+                detections.append(detection)
+                    
+            except Exception as e:
+                logger.debug(f"Error processing OCR box {box}: {e}")
+                continue
+                    
+        return fo.Detections(detections=detections)
+
     def _to_keypoints(self, points: List[Dict], image_width: int, image_height: int) -> fo.Keypoints:
         """Convert keypoint detections to FiftyOne Keypoints with reasoning.
         
@@ -589,9 +676,11 @@ class MimoVLModel(SamplesMixin, Model):
         # For VQA, return the raw text output
         if self.operation == "vqa":
             return output_text.strip()
-        elif self.operation == "detect" or self.operation == "ocr":
+        elif self.operation == "detect":
             parsed_output = self._parse_json(output_text)
-            return self._to_detections(parsed_output, input_width, input_height)
+        elif self.operation == "ocr":
+            parsed_output = self._parse_json(output_text)
+            return self._to_ocr_detections(parsed_output, input_width, input_height)
         elif self.operation == "point":
             parsed_output = self._parse_json(output_text)
             return self._to_keypoints(parsed_output, input_width, input_height)
