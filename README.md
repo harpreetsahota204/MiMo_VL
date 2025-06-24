@@ -72,7 +72,10 @@ import fiftyone.zoo as foz
 dataset = fo.Dataset.from_dir(...)
 
 # Load the MiMo-VL model
-model = foz.load_zoo_model("XiaomiMiMo/MiMo-VL-7B-RL")
+model = foz.load_zoo_model(
+      "XiaomiMiMo/MiMo-VL-7B-RL",
+      # install_requirements=True, #you can pass this to make sure you have all reqs installed
+      )
 
 # Visual Question Answering
 model.operation = "vqa"
