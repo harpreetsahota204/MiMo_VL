@@ -2,6 +2,8 @@
 
 A FiftyOne Zoo integration for Xiaomi's MiMo-VL Vision-Language Models, providing state-of-the-art multimodal capabilities for computer vision tasks.
 
+<img src="mimo-vl.gif">
+
 ## Overview
 
 This repository implements MiMo-VL models as remote zoo models for [FiftyOne](https://voxel51.com/docs/fiftyone/), enabling easy access to powerful vision-language capabilities. MiMo-VL-7B achieves exceptional performance across visual understanding, reasoning, and GUI interaction tasks, outperforming many larger models on standard benchmarks.
