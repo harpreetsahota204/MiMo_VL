@@ -718,7 +718,7 @@ class MimoVLModel(SamplesMixin, Model):
             return self._to_classifications(parsed_output)
         elif self.operation == "agentic":
             parsed_output = self._parse_json(output_text)
-            return self._to_agentic_keypoints(parsed_output)
+            return self._to_agentic_keypoints(parsed_output, input_width, input_height)
 
     def predict(self, image, sample=None):
         """Process an image with the model.
