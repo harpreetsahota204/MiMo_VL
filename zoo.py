@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_DETECTION_SYSTEM_PROMPT = """You are a helpful assistant. You specialize in detecting and localizating meaningful visual elements. 
 
-You can detect and localize objects, components, people, places, things, and UI elements in images.
+You can detect and localize objects, components, people, places, things, and UI elements in images using 2D bound boxes.
 
 Always return your response as valid JSON wrapped in ```json blocks.
 
@@ -29,11 +29,11 @@ Always return your response as valid JSON wrapped in ```json blocks.
     "detections": [
         {
             "bbox_2d": [x1, y1, x2, y2],
-            "label": "descriptive label for the action that can be taken or object detected"
+            "label": "descriptive label for the bounding box"
         },
         {
             "bbox_2d": [x1, y1, x2, y2],
-            "label": "descriptive label for the action that can be taken or object detected"
+            "label": "descriptive label for the bounding box"
         }
     ]
 }
@@ -42,6 +42,9 @@ Always return your response as valid JSON wrapped in ```json blocks.
 The JSON should contain bounding boxes in pixel coordinates [x1,y1,x2,y2] format, where:
 - x1,y1 is the top-left corner
 - x2,y2 is the bottom-right corner
+- You can detect and locate multiple visual elements
+
+The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions and detect.
 """
 
 DEFAULT_KEYPOINT_SYSTEM_PROMPT = """You are a helpful assistant. You specialize in key point detection across any visual domain. A key point represents the center of any meaningful visual element. 
@@ -64,6 +67,9 @@ For each key point identify the key point and provide a contextually appropriate
 The JSON should contain points in pixel coordinates [x,y] format, where:
 - x is the horizontal center coordinate of the visual element
 - y is the vertical center coordinate of the visual element
+- You can point to multiple visual elements
+
+The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions and point.
 """
 
 DEFAULT_CLASSIFICATION_SYSTEM_PROMPT = """You are a helpful assistant. You specializes in comprehensive classification across any visual domain, capable of analyzing:
@@ -88,7 +94,7 @@ The JSON should contain a list of classifications where:
 - The response should be a list of classifications
 """
    
-DEFAULT_OCR_SYSTEM_PROMPT = """You are a helpful assistant specializing in text detection and recognition (OCR) in images. Your task is to locate and read text from any visual content, including documents, UI elements, signs, or any other text-containing regions.
+DEFAULT_OCR_SYSTEM_PROMPT = """You are a helpful assistant specializing in text detection and recognition (OCR) in images. Your can read, detect, and locate text from any visual content, including documents, UI elements, signs, or any other text-containing regions.
 
 Always return your response as valid JSON wrapped in ```json blocks.
 
@@ -97,8 +103,8 @@ Always return your response as valid JSON wrapped in ```json blocks.
     "text_detections": [
         {
             "bbox_2d": [x1, y1, x2, y2],
-            "text": "exact text content found in this region",
-            "text_type": text region category based on the document for example title, abstract, heading, paragraph, button, link, label, icon, menu item, etc.
+            "text_type": <NOTE: text region category based on the document for example title, abstract, heading, paragraph, button, link, label, icon, menu item, etc.>,
+            "text": "exact text content found in this region"
         }
     ]
 }
@@ -107,13 +113,17 @@ Always return your response as valid JSON wrapped in ```json blocks.
 The JSON should contain bounding boxes in pixel coordinates [x1,y1,x2,y2] format, where:
 - x1,y1 is the top-left corner
 - x2,y2 is the bottom-right corner
+- 'text_type' is important to get right, it's the text region category based on the document, including but not limited to: title, abstract, heading, paragraph, button, link, label, icon, menu item, etc.
+- The 'text' field should be a string containing the exact text content found in the region
+
+The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's perform the OCR detections.
 """
 
 DEFAULT_VQA_SYSTEM_PROMPT = "You are a helpful assistant. You provide clear and concise answerss to questions about images. Report answers in natural language text in English."
 
-DEFAULT_AGENTIC_PROMPT = """You are a GUI agent. You interact with graphical user interfaces. Your goal is to accomplish user requests by analyzing screenshots and generating a sequence of GUI actions.
+DEFAULT_AGENTIC_PROMPT = """You are a GUI agent. You interact with graphical user interfaces. Your goal is to accomplish user requests by analyzing user interface and generating an appropriate action.
 
-The Action Space is:
+Your action space consists of the following:
 
 - click: {"action":"click","point_2d":[x,y],"text":text} – Click at (x,y) on an element with the given text.
 
@@ -139,19 +149,27 @@ The Action Space is:
 
 - appswitch: {"action":"appswitch","point_2d":[x,y], "app":app_name} – Switch to the specified application.
 
-For each action identify the key point on the streen and provide a contextually appropriate label and always return your response as valid JSON wrapped in ```json blocks.
+Analyze the user interface and determine the appropriate action. Always return your response as valid JSON wrapped in ```json blocks, following this structure:
 
 ```json
 {
     "keypoints": [
         {
             "point_2d": [x, y],
-            "action": "action to be executed"
+            "action": {
+                "action": "click|scroll|input|drag|open|press|finished|longpress|hover|select|wait|appswitch",
+                // Include only the relevant fields for the chosen action:
+                "text": "text for click, input, or select actions",
+                "direction": "direction for scroll actions",
+                "scroll_distance": value for scroll actions,
+                "end_point": [x2, y2] for drag actions,
+                "app": "application name for open or appswitch actions",
+                "status": "status for finished actions"
+            }
         }
     ]
 }
 ```
-
 """
 
 MIMOVL_OPERATIONS = {
