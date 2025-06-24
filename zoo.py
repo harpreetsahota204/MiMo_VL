@@ -150,6 +150,7 @@ For each action identify the key point on the streen and provide a contextually 
         }
     ]
 }
+```
 
 """
 
@@ -547,37 +548,61 @@ class MimoVLModel(SamplesMixin, Model):
         """Convert agentic actions to FiftyOne Keypoints.
         
         Args:
-            actions: Dictionary containing:
-                - keypoints list with point_2d and label
-                - reasoning from think tags
+            actions: Dictionary containing keypoints with point_2d and action JSON string
             image_width: Original image width in pixels
             image_height: Original image height in pixels
-        
-        Returns:
-            fo.Keypoints: FiftyOne Keypoints object
         """
         keypoints = []
         
-        # Extract reasoning if present
-        reasoning = actions.get("reasoning", "") if isinstance(actions, dict) else ""
-        
         # Handle nested dictionary structures
-        if isinstance(points, dict):
-            points = points.get("data", points)
-            if isinstance(points, dict):
-                points = next((v for v in points.values() if isinstance(v, list)), points)
+        if isinstance(actions, dict):
+            actions = actions.get("data", actions)
+            if isinstance(actions, dict):
+                actions = next((v for v in actions.values() if isinstance(v, list)), actions)
         
-        for idx, kp in enumerate(points):
+        for idx, kp in enumerate(actions):
             try:
                 # Extract and normalize point coordinates
                 x, y = map(float, kp["point_2d"])
                 point = [x / image_width, y / image_height]
                 
+                # Parse the action JSON string into a dict
+                action_data = json.loads(kp["action"]) if isinstance(kp["action"], str) else kp["action"]
+                action_type = action_data["action"]
+                
+                # Base metadata with sequence index and action type
+                metadata = {
+                    "sequence_idx": idx,
+                    "action": action_type
+                }
+                
+                # Add action-specific metadata
+                if action_type in ["click", "input", "select"]:
+                    metadata["text"] = action_data.get("text")
+                    
+                elif action_type == "scroll":
+                    metadata["direction"] = action_data.get("direction")
+                    metadata["scroll_distance"] = action_data.get("scroll_distance")
+                    
+                elif action_type == "drag":
+                    if "end_point" in action_data:
+                        x2, y2 = map(float, action_data["end_point"])
+                        metadata["end_point"] = [x2 / image_width, y2 / image_height]
+                        
+                elif action_type in ["open", "appswitch"]:
+                    metadata["app"] = action_data.get("app")
+                    
+                elif action_type == "finished":
+                    metadata["status"] = action_data.get("status")
+                    
+                # No additional parameters needed for these actions
+                elif action_type in ["press", "longpress", "hover", "wait"]:
+                    pass
+                
                 keypoint = fo.Keypoint(
-                    label=kp["action"],
+                    label=action_type,
                     points=[point],
-                    reasoning=reasoning,
-                    metadata={"sequence_idx": idx}
+                    metadata=metadata
                 )
                 keypoints.append(keypoint)
                     
