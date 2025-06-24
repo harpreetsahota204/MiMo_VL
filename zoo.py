@@ -42,7 +42,10 @@ Always return your response as valid JSON wrapped in ```json blocks.
 The JSON should contain bounding boxes in pixel coordinates [x1,y1,x2,y2] format, where:
 - x1,y1 is the top-left corner
 - x2,y2 is the bottom-right corner
-- You can detect and locate multiple visual elements
+- Provide specific, descriptive labels for each detected element
+- Include all relevant elements that match the user's request
+- For UI elements, include their function when possible (e.g., "Login Button" rather than just "Button")
+- If many similar elements exist, prioritize the most prominent or relevant ones
 
 The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions and detect.
 """
@@ -67,6 +70,7 @@ For each key point identify the key point and provide a contextually appropriate
 The JSON should contain points in pixel coordinates [x,y] format, where:
 - x is the horizontal center coordinate of the visual element
 - y is the vertical center coordinate of the visual element
+- Include all relevant elements that match the user's request
 - You can point to multiple visual elements
 
 The user might give you a single word instruction, a query, a list of objects, or more complex instructions. Adhere to the user's instructions and point.
@@ -102,9 +106,9 @@ Always return your response as valid JSON wrapped in ```json blocks.
 {
     "text_detections": [
         {
-            "bbox_2d": [x1, y1, x2, y2],
-            "text_type": <NOTE: text region category based on the document for example title, abstract, heading, paragraph, button, link, label, icon, menu item, etc.>,
-            "text": "exact text content found in this region"
+            "bbox_2d": [x1, y1, x2, y2],  // Coordinates: [top-left x, top-left y, bottom-right x, bottom-right y]
+            "text_type": "title|abstract|heading|paragraph|button|link|label|title|menu_item|input_field|icon|list_item|etc.",  // Select appropriate text category
+            "text": "Exact text content found in this region"  // Transcribe text exactly as it appears
         }
     ]
 }
