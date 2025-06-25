@@ -701,18 +701,38 @@ class MimoVLModel(SamplesMixin, Model):
         Raises:
             ValueError: If no prompt has been set
         """
+        # Use local prompt variable instead of modifying self.prompt
+        prompt = self.prompt  # Start with instance default
+        
         if sample is not None and self._get_field() is not None:
             field_value = sample.get_field(self._get_field())
             if field_value is not None:
-                self.prompt = str(field_value)
-
+                prompt = str(field_value)  # Local variable, doesn't affect instance
+        
+        if not prompt:
+            raise ValueError("No prompt provided.")
+        
         messages = [
-            {"role": "system", "content": self.system_prompt},
             {
-                "role": "user",
+                "role": "system", 
+                "content": [  
+                    {
+                        "type": "text",
+                        "text": self.system_prompt
+                    }
+                ]
+            },
+            {
+                "role": "user", 
                 "content": [
-                    {"type": "text", "text": self.prompt},
-                    {"image": sample.filepath if sample else None}
+                    {
+                        "type": "image", 
+                        "image": sample.filepath if sample else image
+                    },
+                    {
+                        "type": "text", 
+                        "text": prompt
+                    },
                 ]
             }
         ]
