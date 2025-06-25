@@ -220,26 +220,22 @@ class MimoVLModel(SamplesMixin, Model):
         logger.info(f"Loading model from {model_path}")
 
         model_kwargs = {
-            "torch_dtype": self.torch_dtype,
             "device_map":self.device,
             }
 
         if is_flash_attn_2_available():
             model_kwargs["attn_implementation"] = "flash_attention_2"
 
-        if self.torch_dtype:
-            self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-                model_path,
-                trust_remote_code=True,
-                **model_kwargs
+        # Only set specific torch_dtype for CUDA devices
+        if self.device == "cuda":
+            model_kwargs["torch_dtype"] = torch.bfloat16
+
+        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            **model_kwargs
             )
-        else:
-            self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-                model_path,
-                trust_remote_code=True,
-                device_map=self.device,
-            )
-        
+
         logger.info("Loading processor")
         self.processor = AutoProcessor.from_pretrained(
             model_path,
