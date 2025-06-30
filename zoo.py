@@ -214,8 +214,6 @@ class MimoVLModel(SamplesMixin, Model):
         self.device = get_device()
         logger.info(f"Using device: {self.device}")
 
-        # Set dtype for CUDA devices
-        self.torch_dtype = torch.bfloat16 if self.device == "cuda" else None
         # Load model and processor
         logger.info(f"Loading model from {model_path}")
 
